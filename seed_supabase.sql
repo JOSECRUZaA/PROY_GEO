@@ -1,15 +1,8 @@
 -- Script de Población de Datos (Seed) para GeoCarnes LPZ
 -- IMPORTANTE: Ejecutar después de haber creado las tablas principales.
 
--- 1. Insertar Perfiles (Opcional, asumiendo que ya tienes usuarios creados)
--- Si no tienes usuarios autenticados, puedes omitir el vendedor_id o crear usuarios dummy si tus políticas RLS lo permiten.
--- NOTA: Para este seed simple, insertaremos Puntos de Venta sin validar vendedor_id estricto, o puedes reemplazar 'TU_UUID_AQUI' por tu ID de usuario de auth.users.
-
--- Si tu tabla puntos_venta requiere vendedor_id estricto, asegúrate de cambiar la estructura o usar un ID real.
--- Para que el insert funcione sin errores de llave foránea (si perfiles está vacío):
--- Primero asegúrate de registrarte en la app para tener al menos un UUID válido, y reemplaza '00000000-0000-0000-0000-000000000000' por ese ID.
-
--- Para propósitos de este script, asumiremos que se insertan los productos y mercados base.
+-- 1. Eliminar restricciones de autenticación para que funcione sin usuarios
+ALTER TABLE puntos_venta ALTER COLUMN vendedor_id DROP NOT NULL;
 
 -- 2. Insertar Productos Base
 INSERT INTO productos (nombre, precio_referencial) VALUES 
@@ -17,16 +10,11 @@ INSERT INTO productos (nombre, precio_referencial) VALUES
 ('Carne de Pollo', 16.50),
 ('Carne de Cerdo', 28.00);
 
--- Obtener los IDs generados temporalmente (En PostgreSQL puro se haría con variables, aquí lo hacemos directo si conocemos la base)
--- Como usamos UUID, lo ideal es usar gen_random_uuid() o declarar explícitamente.
-
 DO $$
 DECLARE
     res_id UUID := uuid_generate_v4();
     pollo_id UUID := uuid_generate_v4();
     cerdo_id UUID := uuid_generate_v4();
-    -- UUID del administrador/vendedor por defecto (REEMPLAZA ESTO CON TU UUID DE SUPABASE AUTH)
-    admin_id UUID := (SELECT id FROM auth.users LIMIT 1); 
     
     m1 UUID := uuid_generate_v4();
     m2 UUID := uuid_generate_v4();
@@ -37,16 +25,6 @@ DECLARE
     m7 UUID := uuid_generate_v4();
     m8 UUID := uuid_generate_v4();
 BEGIN
-    -- Si no hay usuarios, abortamos suavemente para no romper.
-    IF admin_id IS NULL THEN
-        RAISE NOTICE 'No hay usuarios en auth.users. Registra un usuario primero.';
-        RETURN;
-    END IF;
-
-    -- Aseguramos que exista en perfiles
-    INSERT INTO perfiles (id, rol, nombre_completo) 
-    VALUES (admin_id, 'distribuidor', 'Admin Sistema') 
-    ON CONFLICT (id) DO NOTHING;
 
     -- Insertar Productos
     INSERT INTO productos (id, nombre, precio_referencial) VALUES 
@@ -54,16 +32,16 @@ BEGIN
     (pollo_id, 'Carne de Pollo', 16.50),
     (cerdo_id, 'Carne de Cerdo', 28.00);
 
-    -- Insertar Puntos de Venta (Mercados y Ferias)
+    -- Insertar Puntos de Venta (Mercados y Ferias) sin asociarlos a un vendedor
     INSERT INTO puntos_venta (id, vendedor_id, nombre, tipo, latitud, longitud, estado_aprobacion) VALUES
-    (m1, admin_id, 'Mercado Garita de Lima', 'formal', -16.4950, -68.1450, 'aprobado'),
-    (m2, admin_id, 'Mercado Villa Tunari (El Alto)', 'formal', -16.4850, -68.1950, 'aprobado'),
-    (m3, admin_id, 'Feria 16 de Julio', 'informal', -16.4900, -68.1700, 'aprobado'),
-    (m4, admin_id, 'Mercado Rodríguez', 'formal', -16.5020, -68.1380, 'aprobado'),
-    (m5, admin_id, 'Mercado Achumani', 'formal', -16.5400, -68.0800, 'aprobado'),
-    (m6, admin_id, 'Mercado Río Seco (El Alto)', 'formal', -16.4600, -68.2100, 'aprobado'),
-    (m7, admin_id, 'Mercado Lanza', 'formal', -16.4965, -68.1355, 'aprobado'),
-    (m8, admin_id, 'Cruce Viacha', 'formal', -16.5150, -68.1800, 'aprobado');
+    (m1, NULL, 'Mercado Garita de Lima', 'formal', -16.4950, -68.1450, 'aprobado'),
+    (m2, NULL, 'Mercado Villa Tunari (El Alto)', 'formal', -16.4850, -68.1950, 'aprobado'),
+    (m3, NULL, 'Feria 16 de Julio', 'informal', -16.4900, -68.1700, 'aprobado'),
+    (m4, NULL, 'Mercado Rodríguez', 'formal', -16.5020, -68.1380, 'aprobado'),
+    (m5, NULL, 'Mercado Achumani', 'formal', -16.5400, -68.0800, 'aprobado'),
+    (m6, NULL, 'Mercado Río Seco (El Alto)', 'formal', -16.4600, -68.2100, 'aprobado'),
+    (m7, NULL, 'Mercado Lanza', 'formal', -16.4965, -68.1355, 'aprobado'),
+    (m8, NULL, 'Cruce Viacha', 'formal', -16.5150, -68.1800, 'aprobado');
 
     -- Insertar Inventarios (Estado actual de abastecimiento y precios)
     
