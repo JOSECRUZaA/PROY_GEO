@@ -1,6 +1,3 @@
--- Script de Población de Datos (Seed) para GeoCarnes LPZ
--- IMPORTANTE: Ejecutar después de haber creado las tablas principales.
-
 -- 1. Eliminar restricciones de autenticación para que funcione sin usuarios
 ALTER TABLE puntos_venta ALTER COLUMN vendedor_id DROP NOT NULL;
 
