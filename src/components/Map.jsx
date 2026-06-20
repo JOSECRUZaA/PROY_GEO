@@ -86,7 +86,7 @@ const RoutingLayer = ({ userLocation, destination }) => {
   return null;
 };
 
-const Map = ({ producto, mapView, userLocation, destination, data = [] }) => {
+const Map = ({ producto, mapView, userLocation, destination, data = [], onSelectDestination }) => {
   // Centro de La Paz / El Alto
   const centerPosition = [-16.505, -68.160];
   const isHeatmap = mapView === 'heatmap';
@@ -142,12 +142,20 @@ const Map = ({ producto, mapView, userLocation, destination, data = [] }) => {
                     <span className="font-semibold text-sm">Precio ({producto}):</span>
                     <span className="font-bold text-sm">Bs. {info.precio}</span>
                   </div>
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-2">
                     <span className="font-semibold text-sm">Estado:</span>
                     <span className="font-bold text-sm" style={{ color: colorClass }}>
                       {info.estado.toUpperCase()}
                     </span>
                   </div>
+                  {onSelectDestination && (
+                    <button 
+                      onClick={() => onSelectDestination(mercado)}
+                      className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-3 rounded text-xs transition-colors"
+                    >
+                      📍 Trazar ruta hacia aquí
+                    </button>
+                  )}
                 </div>
               </Popup>
             </CircleMarker>

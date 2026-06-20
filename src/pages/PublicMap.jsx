@@ -77,6 +77,24 @@ function PublicMap() {
     };
   }, [producto, mercadosData]);
 
+  const encontrarRutaHacia = (mercado) => {
+    if (!("geolocation" in navigator)) return alert("Tu navegador no soporta geolocalización.");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
+        setDestination({ lat: mercado.lat, lng: mercado.lng });
+        setIsMobilePanelOpen(false);
+      },
+      (error) => {
+        alert("Simulemos una ubicación en El Alto por falta de GPS.");
+        setUserLocation({ lat: -16.510, lng: -68.180 }); 
+        setDestination({ lat: mercado.lat, lng: mercado.lng });
+        setIsMobilePanelOpen(false);
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
   const encontrarRuta = () => {
     if (!("geolocation" in navigator)) return alert("Tu navegador no soporta geolocalización.");
     navigator.geolocation.getCurrentPosition(
@@ -110,7 +128,14 @@ function PublicMap() {
       
       {/* Mapa de Fondo (Abarca toda la pantalla en móvil) */}
       <div className="absolute inset-0 z-0">
-        <Map producto={producto} mapView={mapView} userLocation={userLocation} destination={destination} data={mercadosData} />
+        <Map 
+          producto={producto} 
+          mapView={mapView} 
+          userLocation={userLocation} 
+          destination={destination} 
+          data={mercadosData} 
+          onSelectDestination={encontrarRutaHacia}
+        />
       </div>
 
       {/* Indicadores Superiores Flotantes (Visibles en Móvil y Desktop) */}
