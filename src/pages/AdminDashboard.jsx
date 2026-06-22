@@ -2,6 +2,29 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
 import { LogOut, ArrowLeft, Save, Activity, RefreshCw, Trash2, Plus, MapPin } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix para el icono por defecto de leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+function LocationMarker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
+    },
+  });
+
+  return position === null ? null : (
+    <Marker position={position}></Marker>
+  );
+}
 
 function AdminDashboard() {
   const [session, setSession] = useState(null);
@@ -230,6 +253,24 @@ function AdminDashboard() {
                   <input type="number" step="0.0001" required value={newMercado.longitud} onChange={e => setNewMercado({...newMercado, longitud: e.target.value})} className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:border-emerald-500 outline-none" />
                 </div>
              </div>
+
+             {/* Selector de Ubicación en Mapa */}
+             <div className="md:col-span-4 h-64 w-full rounded-xl overflow-hidden border border-white/10 relative z-0 mt-2">
+               <MapContainer center={[-16.5000, -68.1500]} zoom={13} className="h-full w-full" scrollWheelZoom={true}>
+                 <TileLayer
+                   attribution='&copy; OpenStreetMap'
+                   url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                 />
+                 <LocationMarker 
+                   position={{ lat: Number(newMercado.latitud), lng: Number(newMercado.longitud) }} 
+                   setPosition={(pos) => setNewMercado({...newMercado, latitud: pos.lat.toFixed(5), longitud: pos.lng.toFixed(5)})} 
+                 />
+               </MapContainer>
+               <div className="absolute top-2 right-2 z-[400] bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-[10px] text-zinc-300 pointer-events-none">
+                 Haz clic en el mapa para ajustar la ubicación
+               </div>
+             </div>
+
              <div className="md:col-span-4 flex justify-end mt-2">
                <button type="submit" className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg text-xs font-bold uppercase shadow-[0_0_15px_rgba(16,185,129,0.4)] transition-all">Crear e Inicializar Inventario</button>
              </div>
