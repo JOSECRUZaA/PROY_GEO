@@ -58,7 +58,18 @@ function AdminDashboard() {
 
   const fetchProductos = async () => {
     const { data } = await supabase.from('productos').select('*');
-    if (data) setProductosConfig(data);
+    if (data) {
+      // Filtrar productos duplicados por nombre
+      const unicos = [];
+      const nombres = new Set();
+      data.forEach(p => {
+        if (!nombres.has(p.nombre)) {
+          nombres.add(p.nombre);
+          unicos.push(p);
+        }
+      });
+      setProductosConfig(unicos);
+    }
   };
 
   const fetchData = async () => {

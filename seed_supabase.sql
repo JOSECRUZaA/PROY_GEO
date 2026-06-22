@@ -1,11 +1,11 @@
 -- 1. Eliminar restricciones de autenticación para que funcione sin usuarios
 ALTER TABLE puntos_venta ALTER COLUMN vendedor_id DROP NOT NULL;
 
--- 2. Insertar Productos Base
-INSERT INTO productos (nombre, precio_referencial) VALUES 
-('Carne de Res', 40.00),
-('Carne de Pollo', 16.50),
-('Carne de Cerdo', 28.00);
+-- 2. Insertar Productos Base (Comentado porque se insertan más abajo en el bloque DO $$)
+-- INSERT INTO productos (nombre, precio_referencial) VALUES 
+-- ('Carne de Res', 40.00),
+-- ('Carne de Pollo', 16.50),
+-- ('Carne de Cerdo', 28.00);
 
 DO $$
 DECLARE
