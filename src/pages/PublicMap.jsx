@@ -91,7 +91,7 @@ function PublicMap() {
         setDestination({ lat: mercado.lat, lng: mercado.lng });
         setIsMobilePanelOpen(false);
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 
@@ -119,7 +119,7 @@ function PublicMap() {
         const fallbackDest = mercadosData.find(m => m[producto] && m[producto].estado !== 'Agotado');
         if (fallbackDest) setDestination({ lat: fallbackDest.lat, lng: fallbackDest.lng });
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
   };
 

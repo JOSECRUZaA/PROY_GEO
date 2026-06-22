@@ -83,3 +83,47 @@ BEGIN
     (m8, res_id, 46.00, 'Escaso', 0.9);
 
 END $$;
+
+-- 3. Configurar Políticas de Seguridad (RLS) para permitir Edición y Eliminación a usuarios logueados
+ALTER TABLE puntos_venta ENABLE ROW LEVEL SECURITY;
+ALTER TABLE inventarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
+
+-- Políticas para Puntos de Venta
+DROP POLICY IF EXISTS "Permitir select a todos en puntos_venta" ON puntos_venta;
+CREATE POLICY "Permitir select a todos en puntos_venta" ON puntos_venta FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Permitir insert a usuarios autenticados en puntos_venta" ON puntos_venta;
+CREATE POLICY "Permitir insert a usuarios autenticados en puntos_venta" ON puntos_venta FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir update a usuarios autenticados en puntos_venta" ON puntos_venta;
+CREATE POLICY "Permitir update a usuarios autenticados en puntos_venta" ON puntos_venta FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir delete a usuarios autenticados en puntos_venta" ON puntos_venta;
+CREATE POLICY "Permitir delete a usuarios autenticados en puntos_venta" ON puntos_venta FOR DELETE TO authenticated USING (true);
+
+-- Políticas para Inventarios
+DROP POLICY IF EXISTS "Permitir select a todos en inventarios" ON inventarios;
+CREATE POLICY "Permitir select a todos en inventarios" ON inventarios FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Permitir insert a usuarios autenticados en inventarios" ON inventarios;
+CREATE POLICY "Permitir insert a usuarios autenticados en inventarios" ON inventarios FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir update a usuarios autenticados en inventarios" ON inventarios;
+CREATE POLICY "Permitir update a usuarios autenticados en inventarios" ON inventarios FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir delete a usuarios autenticados en inventarios" ON inventarios;
+CREATE POLICY "Permitir delete a usuarios autenticados en inventarios" ON inventarios FOR DELETE TO authenticated USING (true);
+
+-- Políticas para Productos
+DROP POLICY IF EXISTS "Permitir select a todos en productos" ON productos;
+CREATE POLICY "Permitir select a todos en productos" ON productos FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Permitir insert a usuarios autenticados en productos" ON productos;
+CREATE POLICY "Permitir insert a usuarios autenticados en productos" ON productos FOR INSERT TO authenticated WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir update a usuarios autenticados en productos" ON productos;
+CREATE POLICY "Permitir update a usuarios autenticados en productos" ON productos FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Permitir delete a usuarios autenticados en productos" ON productos;
+CREATE POLICY "Permitir delete a usuarios autenticados en productos" ON productos FOR DELETE TO authenticated USING (true);
