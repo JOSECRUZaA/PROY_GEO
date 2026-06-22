@@ -39,8 +39,18 @@ function AdminDashboard() {
     nombre: '',
     tipo: 'formal',
     latitud: -16.5000,
-    longitud: -68.1500
+    longitud: -68.1500,
+    productosSeleccionados: []
   });
+
+  const toggleNewMercadoProduct = (productoId) => {
+    setNewMercado(prev => {
+      const selected = prev.productosSeleccionados.includes(productoId)
+        ? prev.productosSeleccionados.filter(id => id !== productoId)
+        : [...prev.productosSeleccionados, productoId];
+      return { ...prev, productosSeleccionados: selected };
+    });
+  };
 
   const navigate = useNavigate();
 
@@ -136,6 +146,7 @@ function AdminDashboard() {
   const handleAddMercado = async (e) => {
     e.preventDefault();
     if (!newMercado.nombre) return alert("El nombre es obligatorio");
+    if (newMercado.productosSeleccionados.length === 0) return alert("Debe seleccionar al menos un producto para vender");
     setLoading(true);
 
     try {
@@ -154,24 +165,28 @@ function AdminDashboard() {
 
       if (puntoError) throw puntoError;
 
-      // 2. Crear Inventario Base para Pollo y Res
-      const inventariosBase = productosConfig.map(prod => {
-        const esPollo = prod.nombre.toLowerCase().includes('pollo');
-        return {
-          punto_venta_id: insertedPunto.id,
-          producto_id: prod.id,
-          precio_actual: esPollo ? 16.50 : 40.00,
-          estado: 'Normal',
-          nivel_calor: 0.2
-        };
-      });
+      // 2. Crear Inventario Base para los productos seleccionados
+      const inventariosBase = productosConfig
+        .filter(prod => newMercado.productosSeleccionados.includes(prod.id))
+        .map(prod => {
+          const esPollo = prod.nombre.toLowerCase().includes('pollo');
+          return {
+            punto_venta_id: insertedPunto.id,
+            producto_id: prod.id,
+            precio_actual: esPollo ? 16.50 : 40.00,
+            estado: 'Normal',
+            nivel_calor: 0.2
+          };
+        });
 
-      const { error: invError } = await supabase.from('inventarios').insert(inventariosBase);
-      if (invError) throw invError;
+      if (inventariosBase.length > 0) {
+        const { error: invError } = await supabase.from('inventarios').insert(inventariosBase);
+        if (invError) throw invError;
+      }
 
       alert("Punto de Venta agregado exitosamente");
       setIsAdding(false);
-      setNewMercado({ nombre: '', tipo: 'formal', latitud: -16.5000, longitud: -68.1500 });
+      setNewMercado({ nombre: '', tipo: 'formal', latitud: -16.5000, longitud: -68.1500, productosSeleccionados: [] });
       fetchData(); // Recargar la lista
 
     } catch (err) {
@@ -198,6 +213,54 @@ function AdminDashboard() {
       alert("Error al eliminar: " + err.message);
       setLoading(false);
     }
+  };
+
+  const handleAddProductToMarket = async (mercadoId, productoId) => {
+    if (!productoId) return;
+    setLoading(true);
+    try {
+      const prod = productosConfig.find(p => p.id === productoId);
+      const esPollo = prod.nombre.toLowerCase().includes('pollo');
+      
+      const { data: insertedInv, error } = await supabase
+        .from('inventarios')
+        .insert({
+          punto_venta_id: mercadoId,
+          producto_id: productoId,
+          precio_actual: esPollo ? 16.50 : 40.00,
+          estado: 'Normal',
+          nivel_calor: 0.2
+        })
+        .select(`id, precio_actual, estado, nivel_calor, productos ( id, nombre )`)
+        .single();
+        
+      if (error) throw error;
+      
+      setMercados(prev => prev.map(m => {
+        if (m.id !== mercadoId) return m;
+        return { ...m, inventarios: [...m.inventarios, insertedInv] };
+      }));
+    } catch (err) {
+      alert("Error al añadir producto: " + err.message);
+    }
+    setLoading(false);
+  };
+
+  const handleRemoveProductFromMarket = async (mercadoId, inventarioId, nombreProducto) => {
+    if (!window.confirm(`¿Seguro que deseas eliminar "${nombreProducto}" de este mercado?`)) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('inventarios').delete().eq('id', inventarioId);
+      if (error) throw error;
+      
+      setMercados(prev => prev.map(m => {
+        if (m.id !== mercadoId) return m;
+        return { ...m, inventarios: m.inventarios.filter(inv => inv.id !== inventarioId) };
+      }));
+    } catch (err) {
+      alert("Error al eliminar producto: " + err.message);
+    }
+    setLoading(false);
   };
 
   if (loading) {
@@ -265,6 +328,23 @@ function AdminDashboard() {
                 </div>
              </div>
 
+             <div className="md:col-span-4 mt-2">
+               <label className="block text-[10px] text-zinc-400 uppercase mb-2">¿Qué productos venderán?</label>
+               <div className="flex gap-4 flex-wrap">
+                 {productosConfig.map(prod => (
+                   <label key={prod.id} className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+                     <input 
+                       type="checkbox" 
+                       checked={newMercado.productosSeleccionados.includes(prod.id)}
+                       onChange={() => toggleNewMercadoProduct(prod.id)}
+                       className="accent-emerald-500 w-4 h-4"
+                     />
+                     {prod.nombre}
+                   </label>
+                 ))}
+               </div>
+             </div>
+
              {/* Selector de Ubicación en Mapa */}
              <div className="md:col-span-4 h-64 w-full rounded-xl overflow-hidden border border-white/10 relative z-0 mt-2">
                <MapContainer center={[-16.5000, -68.1500]} zoom={13} className="h-full w-full" scrollWheelZoom={true}>
@@ -320,9 +400,18 @@ function AdminDashboard() {
 
             <div className="space-y-4 flex-1">
               {mercado.inventarios.map(inv => (
-                <div key={inv.id} className="p-3 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-3">
-                  <div className="font-medium text-rose-400 text-sm">
-                    {inv.productos?.nombre}
+                <div key={inv.id} className="p-3 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-3 relative">
+                  <div className="flex justify-between items-center">
+                    <div className="font-medium text-rose-400 text-sm">
+                      {inv.productos?.nombre}
+                    </div>
+                    <button 
+                      onClick={() => handleRemoveProductFromMarket(mercado.id, inv.id, inv.productos?.nombre)}
+                      className="text-zinc-500 hover:text-red-500 transition-colors"
+                      title="Quitar este producto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-3">
@@ -360,6 +449,24 @@ function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <select 
+                className="flex-1 bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs text-zinc-300 focus:outline-none focus:border-emerald-500 appearance-none"
+                onChange={(e) => {
+                  if(e.target.value) {
+                    handleAddProductToMarket(mercado.id, e.target.value);
+                    e.target.value = "";
+                  }
+                }}
+                defaultValue=""
+              >
+                <option value="" disabled>+ Añadir Producto...</option>
+                {productosConfig.filter(p => !mercado.inventarios.some(inv => inv.productos?.id === p.id)).map(p => (
+                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                ))}
+              </select>
             </div>
 
             <button 

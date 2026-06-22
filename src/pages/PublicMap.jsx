@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
 
 function PublicMap() {
-  const [mapView, setMapView] = useState('heatmap'); 
+  const [mapView, setMapView] = useState('normal'); 
   const [producto, setProducto] = useState('pollo'); 
   const [userLocation, setUserLocation] = useState(null);
   const [destination, setDestination] = useState(null);
