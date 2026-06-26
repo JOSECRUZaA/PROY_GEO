@@ -40,7 +40,43 @@ function Login() {
     try {
       if (isLogin) {
         const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        
+        if (error) {
+           // Check if it's a pre-registered user
+           const { data: preData } = await supabase
+             .from('pre_registro_usuarios')
+             .select('*')
+             .eq('email', email)
+             .eq('password_temporal', password)
+             .single();
+             
+           if (preData) {
+              // Sign them up!
+              const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email, password });
+              if (signUpErr) throw signUpErr;
+              
+              if (signUpData.user) {
+                 // Insert their role
+                 await supabase.from('roles_usuario').insert({
+                   user_id: signUpData.user.id,
+                   email: signUpData.user.email,
+                   rol: preData.rol,
+                   punto_venta_id: preData.punto_venta_id || null,
+                   proveedor_id: preData.proveedor_id || null
+                 });
+                 // Delete the pre-registration record
+                 await supabase.from('pre_registro_usuarios').delete().eq('id', preData.id);
+                 
+                 if (preData.rol === 'proveedor') navigate('/provider');
+                 else navigate('/store');
+                 
+                 setLoading(false);
+                 return;
+              }
+           }
+           // If no pre-registration found, throw original error
+           throw error;
+        }
         
         const { data: roleData } = await supabase
           .from('roles_usuario')

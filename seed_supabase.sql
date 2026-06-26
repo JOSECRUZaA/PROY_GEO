@@ -3,6 +3,7 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Para asegurarnos de que la estructura se actualice, borramos las tablas si existen
+DROP TABLE IF EXISTS pre_registro_usuarios CASCADE;
 DROP TABLE IF EXISTS inventarios CASCADE;
 DROP TABLE IF EXISTS roles_usuario CASCADE;
 DROP TABLE IF EXISTS proveedores CASCADE;
@@ -45,6 +46,17 @@ CREATE TABLE IF NOT EXISTS roles_usuario (
     rol TEXT NOT NULL CHECK (rol IN ('superadmin', 'proveedor', 'tienda')),
     proveedor_id UUID REFERENCES proveedores(id) ON DELETE CASCADE,
     punto_venta_id UUID REFERENCES puntos_venta(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Pre-registro de usuarios (Tiendas y Distribuidores)
+CREATE TABLE IF NOT EXISTS pre_registro_usuarios (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT NOT NULL UNIQUE,
+    password_temporal TEXT NOT NULL,
+    rol TEXT NOT NULL CHECK (rol IN ('tienda', 'proveedor')),
+    punto_venta_id UUID REFERENCES puntos_venta(id) ON DELETE CASCADE,
+    proveedor_id UUID REFERENCES proveedores(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -139,3 +151,11 @@ DROP POLICY IF EXISTS "Permitir insert a todos" ON inventarios;
 CREATE POLICY "Permitir insert a todos" ON inventarios FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Permitir update a todos" ON inventarios;
 CREATE POLICY "Permitir update a todos" ON inventarios FOR UPDATE USING (true) WITH CHECK (true);
+
+ALTER TABLE pre_registro_usuarios ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir select a todos" ON pre_registro_usuarios;
+CREATE POLICY "Permitir select a todos" ON pre_registro_usuarios FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir insert a todos" ON pre_registro_usuarios;
+CREATE POLICY "Permitir insert a todos" ON pre_registro_usuarios FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir delete a todos" ON pre_registro_usuarios;
+CREATE POLICY "Permitir delete a todos" ON pre_registro_usuarios FOR DELETE USING (true);
