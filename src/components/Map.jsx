@@ -23,10 +23,12 @@ const HeatmapLayer = ({ data, producto }) => {
     
     data.forEach(mercado => {
       const info = mercado[producto];
-      heatPoints.push([mercado.lat, mercado.lng, info.intensidad]);
-      // Puntos difuminados para expandir el calor
-      heatPoints.push([mercado.lat + 0.002, mercado.lng + 0.001, info.intensidad * 0.8]);
-      heatPoints.push([mercado.lat - 0.001, mercado.lng - 0.002, info.intensidad * 0.8]);
+      if (info) {
+        heatPoints.push([mercado.lat, mercado.lng, info.intensidad]);
+        // Puntos difuminados para expandir el calor
+        heatPoints.push([mercado.lat + 0.002, mercado.lng + 0.001, info.intensidad * 0.8]);
+        heatPoints.push([mercado.lat - 0.001, mercado.lng - 0.002, info.intensidad * 0.8]);
+      }
     });
 
     const heatLayer = L.heatLayer(heatPoints, {
