@@ -129,6 +129,47 @@ const Map = ({ producto, mapView, userLocation, destination, data = [], onSelect
           if(!info) return null; // Si el producto no existe en la BD
           let colorClass = info.estado === 'Normal' ? '#84cc16' : (info.estado === 'Poco' ? '#eab308' : '#dc2626');
           
+          const popupContent = (
+            <Popup className="custom-popup">
+              <div className="p-1 text-slate-800">
+                <h3 className="font-bold text-lg mb-1">{mercado.nombre}</h3>
+                <p className="text-xs text-slate-500 mb-2 border-b border-slate-200 pb-2">Reporte ciudadano (hace 10 min)</p>
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-semibold text-sm">Precio ({producto}):</span>
+                  <span className="font-bold text-sm">Bs. {info.precio}</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold text-sm">Estado:</span>
+                  <span className="font-bold text-sm" style={{ color: colorClass }}>
+                    {info.estado.toUpperCase()}
+                  </span>
+                </div>
+                {onSelectDestination && (
+                  <button 
+                    onClick={() => onSelectDestination(mercado)}
+                    className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-3 rounded text-xs transition-colors"
+                  >
+                    📍 Trazar ruta hacia aquí
+                  </button>
+                )}
+              </div>
+            </Popup>
+          );
+
+          if (mapView === 'pulses' && (info.estado === 'Agotado' || info.estado === 'Escaso')) {
+            const pulseClass = info.estado === 'Agotado' ? 'pulse-marker-red' : 'pulse-marker-orange';
+            const icon = L.divIcon({
+              className: pulseClass,
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            });
+            return (
+              <Marker key={mercado.id} position={[mercado.lat, mercado.lng]} icon={icon}>
+                {popupContent}
+              </Marker>
+            );
+          }
+
           return (
             <CircleMarker
               key={mercado.id}
@@ -136,30 +177,7 @@ const Map = ({ producto, mapView, userLocation, destination, data = [], onSelect
               radius={8}
               pathOptions={{ fillColor: colorClass, color: '#ffffff', weight: 2, fillOpacity: 0.9 }}
             >
-              <Popup className="custom-popup">
-                <div className="p-1 text-slate-800">
-                  <h3 className="font-bold text-lg mb-1">{mercado.nombre}</h3>
-                  <p className="text-xs text-slate-500 mb-2 border-b border-slate-200 pb-2">Reporte ciudadano (hace 10 min)</p>
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold text-sm">Precio ({producto}):</span>
-                    <span className="font-bold text-sm">Bs. {info.precio}</span>
-                  </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-sm">Estado:</span>
-                    <span className="font-bold text-sm" style={{ color: colorClass }}>
-                      {info.estado.toUpperCase()}
-                    </span>
-                  </div>
-                  {onSelectDestination && (
-                    <button 
-                      onClick={() => onSelectDestination(mercado)}
-                      className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-1.5 px-3 rounded text-xs transition-colors"
-                    >
-                      📍 Trazar ruta hacia aquí
-                    </button>
-                  )}
-                </div>
-              </Popup>
+              {popupContent}
             </CircleMarker>
           );
         })}

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Map from '../components/Map';
-import { AlertTriangle, Map as MapIcon, Layers, Navigation, AlertCircle, LogIn, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, Map as MapIcon, Layers, Navigation, AlertCircle, LogIn, ChevronDown, ChevronUp, Radio } from 'lucide-react';
 import { mercadosData as mockData } from '../data/mockData';
 import { supabase } from '../lib/supabase';
 import { Link } from 'react-router-dom';
@@ -206,6 +206,7 @@ function PublicMap() {
             <div className="flex gap-2 mb-6 bg-white/5 p-1 rounded-xl border border-white/5">
               <button onClick={() => setMapView('normal')} className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${mapView === 'normal' ? 'bg-zinc-800 text-white shadow-md border border-white/10' : 'text-zinc-400'}`}><MapIcon className="w-3.5 h-3.5" /> Normal</button>
               <button onClick={() => setMapView('heatmap')} className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${mapView === 'heatmap' ? 'bg-zinc-800 text-white shadow-md border border-white/10' : 'text-zinc-400'}`}><Layers className="w-3.5 h-3.5" /> Calor</button>
+              <button onClick={() => setMapView('pulses')} className={`flex-1 flex items-center justify-center gap-1 sm:gap-2 py-2.5 rounded-lg text-[10px] sm:text-xs font-bold transition-all ${mapView === 'pulses' ? 'bg-zinc-800 text-white shadow-md border border-white/10' : 'text-zinc-400'}`}><Radio className="w-3.5 h-3.5" /> Pulsos</button>
             </div>
 
             <div className="space-y-2 text-[10px] sm:text-xs p-3 sm:p-4 bg-black/40 rounded-xl border border-white/5">

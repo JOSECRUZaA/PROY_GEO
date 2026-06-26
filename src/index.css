@@ -6,3 +6,42 @@
   border-radius: 0.5rem;
   z-index: 10;
 }
+
+/* Pulse animation for markers */
+.pulse-marker-red {
+  background: #dc2626;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(220, 38, 38, 0.7);
+  animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 20px rgba(220, 38, 38, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+}
+
+.pulse-marker-orange {
+  background: #f97316;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(249, 115, 22, 0.7);
+  animation: pulse-orange 2s infinite;
+}
+
+@keyframes pulse-orange {
+  0% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(249, 115, 22, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(249, 115, 22, 0);
+  }
+}
