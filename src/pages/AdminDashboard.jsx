@@ -15,11 +15,19 @@ L.Icon.Default.mergeOptions({
 });
 
 function LocationMarker({ position, setPosition }) {
-  useMapEvents({
-    click(e) {
-      setPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
-    },
+  const map = useMapEvents({
+    click() {} // dummy to get map instance
   });
+
+  React.useEffect(() => {
+    const handleClick = (e) => {
+      setPosition({ lat: e.latlng.lat, lng: e.latlng.lng });
+    };
+    map.on('click', handleClick);
+    return () => {
+      map.off('click', handleClick);
+    };
+  }, [map, setPosition]);
 
   return position === null ? null : (
     <Marker position={position}></Marker>
@@ -350,7 +358,7 @@ function AdminDashboard() {
                <MapContainer center={[-16.5000, -68.1500]} zoom={13} className="h-full w-full" scrollWheelZoom={true}>
                  <TileLayer
                    attribution='&copy; OpenStreetMap'
-                   url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                  />
                  <LocationMarker 
                    position={{ lat: Number(newMercado.latitud), lng: Number(newMercado.longitud) }} 
