@@ -25,7 +25,7 @@ function PublicMap() {
           .select(`
             id, nombre, latitud, longitud, estado_aprobacion,
             inventarios (
-              precio_actual, estado, nivel_calor,
+              precio_actual, estado, nivel_calor, cantidad_asignada,
               productos ( nombre )
             )
           `)
@@ -40,7 +40,7 @@ function PublicMap() {
               if(!inv.productos) return;
               const prodName = inv.productos.nombre.toLowerCase(); 
               const mapKey = prodName.includes('pollo') ? 'pollo' : 'carne';
-              obj[mapKey] = { precio: Number(inv.precio_actual), estado: inv.estado, intensidad: Number(inv.nivel_calor) };
+              obj[mapKey] = { precio: Number(inv.precio_actual), estado: inv.estado, intensidad: Number(inv.nivel_calor), stock: inv.cantidad_asignada };
             });
             return obj;
           });

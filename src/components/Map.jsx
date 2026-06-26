@@ -138,6 +138,12 @@ const Map = ({ producto, mapView, userLocation, destination, data = [], onSelect
                   <span className="font-semibold text-sm">Precio ({producto}):</span>
                   <span className="font-bold text-sm">Bs. {info.precio}</span>
                 </div>
+                {info.stock !== undefined && (
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold text-sm">Stock Asignado:</span>
+                    <span className="font-bold text-sm">{info.stock} u.</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center mb-2">
                   <span className="font-semibold text-sm">Estado:</span>
                   <span className="font-bold text-sm" style={{ color: colorClass }}>

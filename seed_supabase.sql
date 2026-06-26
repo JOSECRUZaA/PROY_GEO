@@ -73,7 +73,6 @@ DO $$
 DECLARE
     res_id UUID := uuid_generate_v4();
     pollo_id UUID := uuid_generate_v4();
-    cerdo_id UUID := uuid_generate_v4();
     
     prov_sofia UUID := uuid_generate_v4();
     prov_imba UUID := uuid_generate_v4();
@@ -87,8 +86,7 @@ BEGIN
     -- Insertar Productos
     INSERT INTO productos (id, nombre, precio_referencial) VALUES 
     (res_id, 'Carne de Res', 40.00),
-    (pollo_id, 'Carne de Pollo', 16.50),
-    (cerdo_id, 'Carne de Cerdo', 28.00);
+    (pollo_id, 'Carne de Pollo', 16.50);
 
     -- Insertar Proveedores
     INSERT INTO proveedores (id, nombre, tipo_producto) VALUES 
@@ -122,6 +120,10 @@ DROP POLICY IF EXISTS "Permitir select a todos" ON productos;
 CREATE POLICY "Permitir select a todos" ON productos FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Permitir select a todos" ON puntos_venta;
 CREATE POLICY "Permitir select a todos" ON puntos_venta FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir insert a todos" ON puntos_venta;
+CREATE POLICY "Permitir insert a todos" ON puntos_venta FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir update a todos" ON puntos_venta;
+CREATE POLICY "Permitir update a todos" ON puntos_venta FOR UPDATE USING (true) WITH CHECK (true);
 DROP POLICY IF EXISTS "Permitir select a todos" ON inventarios;
 CREATE POLICY "Permitir select a todos" ON inventarios FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Permitir select a todos" ON proveedores;
