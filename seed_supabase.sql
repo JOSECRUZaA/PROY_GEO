@@ -1,26 +1,87 @@
--- 1. Eliminar restricciones de autenticación para que funcione sin usuarios
-ALTER TABLE puntos_venta ALTER COLUMN vendedor_id DROP NOT NULL;
+-- 1. CREACIÓN DE TABLAS BASE
 
--- 2. Insertar Productos Base (Comentado porque se insertan más abajo en el bloque DO $$)
--- INSERT INTO productos (nombre, precio_referencial) VALUES 
--- ('Carne de Res', 40.00),
--- ('Carne de Pollo', 16.50),
--- ('Carne de Cerdo', 28.00);
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Para asegurarnos de que la estructura se actualice, borramos las tablas si existen
+DROP TABLE IF EXISTS inventarios CASCADE;
+DROP TABLE IF EXISTS roles_usuario CASCADE;
+DROP TABLE IF EXISTS proveedores CASCADE;
+DROP TABLE IF EXISTS puntos_venta CASCADE;
+DROP TABLE IF EXISTS productos CASCADE;
+
+-- Productos
+CREATE TABLE IF NOT EXISTS productos (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre TEXT NOT NULL,
+    precio_referencial NUMERIC(10, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Puntos de Venta (Tiendas / Mercados)
+CREATE TABLE IF NOT EXISTS puntos_venta (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    vendedor_id UUID, -- Puede ser null si es un mercado general
+    nombre TEXT NOT NULL,
+    tipo TEXT NOT NULL,
+    latitud NUMERIC(10, 6) NOT NULL,
+    longitud NUMERIC(10, 6) NOT NULL,
+    estado_aprobacion TEXT DEFAULT 'aprobado',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Proveedores (Sofía, Imba, Mataderos)
+CREATE TABLE IF NOT EXISTS proveedores (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    nombre TEXT NOT NULL,
+    tipo_producto TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Roles de Usuario
+CREATE TABLE IF NOT EXISTS roles_usuario (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID UNIQUE, -- Mapeado a auth.users.id
+    email TEXT NOT NULL,
+    rol TEXT NOT NULL CHECK (rol IN ('superadmin', 'proveedor', 'tienda')),
+    proveedor_id UUID REFERENCES proveedores(id) ON DELETE CASCADE,
+    punto_venta_id UUID REFERENCES puntos_venta(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Inventarios / Asignaciones
+CREATE TABLE IF NOT EXISTS inventarios (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    punto_venta_id UUID REFERENCES puntos_venta(id) ON DELETE CASCADE,
+    producto_id UUID REFERENCES productos(id) ON DELETE CASCADE,
+    proveedor_id UUID REFERENCES proveedores(id) ON DELETE SET NULL,
+    cantidad_asignada INTEGER DEFAULT 0,
+    precio_actual NUMERIC(10, 2) NOT NULL,
+    estado TEXT NOT NULL CHECK (estado IN ('Normal', 'Poco', 'Escaso', 'Agotado')),
+    nivel_calor NUMERIC(3, 2) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2. LIMPIEZA DE DATOS (Opcional, para reiniciar)
+TRUNCATE TABLE inventarios CASCADE;
+TRUNCATE TABLE puntos_venta CASCADE;
+TRUNCATE TABLE productos CASCADE;
+TRUNCATE TABLE proveedores CASCADE;
+TRUNCATE TABLE roles_usuario CASCADE;
+
+-- 3. INSERCIÓN DE DATOS DE PRUEBA
 DO $$
 DECLARE
     res_id UUID := uuid_generate_v4();
     pollo_id UUID := uuid_generate_v4();
     cerdo_id UUID := uuid_generate_v4();
     
+    prov_sofia UUID := uuid_generate_v4();
+    prov_imba UUID := uuid_generate_v4();
+    prov_matadero UUID := uuid_generate_v4();
+    
     m1 UUID := uuid_generate_v4();
     m2 UUID := uuid_generate_v4();
     m3 UUID := uuid_generate_v4();
-    m4 UUID := uuid_generate_v4();
-    m5 UUID := uuid_generate_v4();
-    m6 UUID := uuid_generate_v4();
-    m7 UUID := uuid_generate_v4();
-    m8 UUID := uuid_generate_v4();
 BEGIN
 
     -- Insertar Productos
@@ -29,101 +90,50 @@ BEGIN
     (pollo_id, 'Carne de Pollo', 16.50),
     (cerdo_id, 'Carne de Cerdo', 28.00);
 
-    -- Insertar Puntos de Venta (Mercados y Ferias) sin asociarlos a un vendedor
+    -- Insertar Proveedores
+    INSERT INTO proveedores (id, nombre, tipo_producto) VALUES 
+    (prov_sofia, 'Sofía', 'Carne de Pollo'),
+    (prov_imba, 'Imba', 'Carne de Pollo'),
+    (prov_matadero, 'Matadero Municipal La Paz', 'Carne de Res');
+
+    -- Insertar Puntos de Venta
     INSERT INTO puntos_venta (id, vendedor_id, nombre, tipo, latitud, longitud, estado_aprobacion) VALUES
     (m1, NULL, 'Mercado Garita de Lima', 'formal', -16.4950, -68.1450, 'aprobado'),
-    (m2, NULL, 'Mercado Villa Tunari (El Alto)', 'formal', -16.4850, -68.1950, 'aprobado'),
-    (m3, NULL, 'Feria 16 de Julio', 'informal', -16.4900, -68.1700, 'aprobado'),
-    (m4, NULL, 'Mercado Rodríguez', 'formal', -16.5020, -68.1380, 'aprobado'),
-    (m5, NULL, 'Mercado Achumani', 'formal', -16.5400, -68.0800, 'aprobado'),
-    (m6, NULL, 'Mercado Río Seco (El Alto)', 'formal', -16.4600, -68.2100, 'aprobado'),
-    (m7, NULL, 'Mercado Lanza', 'formal', -16.4965, -68.1355, 'aprobado'),
-    (m8, NULL, 'Cruce Viacha', 'formal', -16.5150, -68.1800, 'aprobado');
+    (m2, NULL, 'Feria 16 de Julio', 'informal', -16.4900, -68.1700, 'aprobado'),
+    (m3, NULL, 'Mercado Rodríguez', 'formal', -16.5020, -68.1380, 'aprobado');
 
-    -- Insertar Inventarios (Estado actual de abastecimiento y precios)
-    
-    -- Mercado Garita de Lima (Especulación / Agotado)
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m1, pollo_id, 23.00, 'Agotado', 1.0),
-    (m1, res_id, 45.00, 'Escaso', 0.8);
-
-    -- Villa Tunari
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m2, pollo_id, 22.00, 'Escaso', 0.8),
-    (m2, res_id, 44.00, 'Escaso', 0.7);
-
-    -- Feria 16 de Julio (Abastecido)
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m3, pollo_id, 17.00, 'Normal', 0.2),
-    (m3, res_id, 38.00, 'Normal', 0.2);
-
-    -- Mercado Rodríguez
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m4, pollo_id, 19.00, 'Poco', 0.5),
-    (m4, res_id, 40.00, 'Normal', 0.3);
-
-    -- Mercado Achumani
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m5, pollo_id, 18.00, 'Normal', 0.1),
-    (m5, res_id, 42.00, 'Normal', 0.2);
-
-    -- Río Seco (Crítico)
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m6, pollo_id, 25.00, 'Agotado', 1.0),
-    (m6, res_id, 48.00, 'Agotado', 1.0);
-
-    -- Lanza
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m7, pollo_id, 20.00, 'Escaso', 0.7),
-    (m7, res_id, 41.00, 'Normal', 0.3);
-
-    -- Cruce Viacha
-    INSERT INTO inventarios (punto_venta_id, producto_id, precio_actual, estado, nivel_calor) VALUES
-    (m8, pollo_id, 21.00, 'Escaso', 0.8),
-    (m8, res_id, 46.00, 'Escaso', 0.9);
+    -- Insertar Asignaciones de Inventario
+    INSERT INTO inventarios (punto_venta_id, producto_id, proveedor_id, cantidad_asignada, precio_actual, estado, nivel_calor) VALUES
+    (m1, pollo_id, prov_sofia, 500, 16.50, 'Normal', 0.2),
+    (m1, res_id, prov_matadero, 150, 40.00, 'Escaso', 0.8),
+    (m2, pollo_id, prov_imba, 1000, 15.50, 'Normal', 0.1);
 
 END $$;
 
--- 3. Configurar Políticas de Seguridad (RLS) para permitir Edición y Eliminación a usuarios logueados
+-- 4. POLÍTICAS DE SEGURIDAD (RLS)
+ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE puntos_venta ENABLE ROW LEVEL SECURITY;
 ALTER TABLE inventarios ENABLE ROW LEVEL SECURITY;
-ALTER TABLE productos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE proveedores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE roles_usuario ENABLE ROW LEVEL SECURITY;
 
--- Políticas para Puntos de Venta
-DROP POLICY IF EXISTS "Permitir select a todos en puntos_venta" ON puntos_venta;
-CREATE POLICY "Permitir select a todos en puntos_venta" ON puntos_venta FOR SELECT USING (true);
+-- Políticas temporales para permitir lectura y escritura pública (simplificación)
+DROP POLICY IF EXISTS "Permitir select a todos" ON productos;
+CREATE POLICY "Permitir select a todos" ON productos FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir select a todos" ON puntos_venta;
+CREATE POLICY "Permitir select a todos" ON puntos_venta FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir select a todos" ON inventarios;
+CREATE POLICY "Permitir select a todos" ON inventarios FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir select a todos" ON proveedores;
+CREATE POLICY "Permitir select a todos" ON proveedores FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir select a todos" ON roles_usuario;
+CREATE POLICY "Permitir select a todos" ON roles_usuario FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Permitir insert a todos" ON roles_usuario;
+CREATE POLICY "Permitir insert a todos" ON roles_usuario FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir update a todos" ON roles_usuario;
+CREATE POLICY "Permitir update a todos" ON roles_usuario FOR UPDATE USING (true) WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Permitir insert a usuarios autenticados en puntos_venta" ON puntos_venta;
-CREATE POLICY "Permitir insert a usuarios autenticados en puntos_venta" ON puntos_venta FOR INSERT TO authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Permitir update a usuarios autenticados en puntos_venta" ON puntos_venta;
-CREATE POLICY "Permitir update a usuarios autenticados en puntos_venta" ON puntos_venta FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Permitir delete a usuarios autenticados en puntos_venta" ON puntos_venta;
-CREATE POLICY "Permitir delete a usuarios autenticados en puntos_venta" ON puntos_venta FOR DELETE TO authenticated USING (true);
-
--- Políticas para Inventarios
-DROP POLICY IF EXISTS "Permitir select a todos en inventarios" ON inventarios;
-CREATE POLICY "Permitir select a todos en inventarios" ON inventarios FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Permitir insert a usuarios autenticados en inventarios" ON inventarios;
-CREATE POLICY "Permitir insert a usuarios autenticados en inventarios" ON inventarios FOR INSERT TO authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Permitir update a usuarios autenticados en inventarios" ON inventarios;
-CREATE POLICY "Permitir update a usuarios autenticados en inventarios" ON inventarios FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Permitir delete a usuarios autenticados en inventarios" ON inventarios;
-CREATE POLICY "Permitir delete a usuarios autenticados en inventarios" ON inventarios FOR DELETE TO authenticated USING (true);
-
--- Políticas para Productos
-DROP POLICY IF EXISTS "Permitir select a todos en productos" ON productos;
-CREATE POLICY "Permitir select a todos en productos" ON productos FOR SELECT USING (true);
-
-DROP POLICY IF EXISTS "Permitir insert a usuarios autenticados en productos" ON productos;
-CREATE POLICY "Permitir insert a usuarios autenticados en productos" ON productos FOR INSERT TO authenticated WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Permitir update a usuarios autenticados en productos" ON productos;
-CREATE POLICY "Permitir update a usuarios autenticados en productos" ON productos FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
-
-DROP POLICY IF EXISTS "Permitir delete a usuarios autenticados en productos" ON productos;
-CREATE POLICY "Permitir delete a usuarios autenticados en productos" ON productos FOR DELETE TO authenticated USING (true);
+DROP POLICY IF EXISTS "Permitir insert a todos" ON inventarios;
+CREATE POLICY "Permitir insert a todos" ON inventarios FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir update a todos" ON inventarios;
+CREATE POLICY "Permitir update a todos" ON inventarios FOR UPDATE USING (true) WITH CHECK (true);

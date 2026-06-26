@@ -13,9 +13,21 @@ function Login() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
-        navigate('/dashboard');
+        const { data: roleData } = await supabase
+          .from('roles_usuario')
+          .select('rol')
+          .eq('user_id', session.user.id)
+          .single();
+        
+        if (roleData) {
+          if (roleData.rol === 'superadmin') navigate('/dashboard');
+          else if (roleData.rol === 'proveedor') navigate('/provider');
+          else navigate('/store');
+        } else {
+          navigate('/store'); // Default fallback
+        }
       }
     });
   }, [navigate]);
@@ -27,14 +39,32 @@ function Login() {
 
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate('/dashboard');
+        
+        const { data: roleData } = await supabase
+          .from('roles_usuario')
+          .select('rol')
+          .eq('user_id', authData.user.id)
+          .single();
+
+        if (roleData) {
+          if (roleData.rol === 'superadmin') navigate('/dashboard');
+          else if (roleData.rol === 'proveedor') navigate('/provider');
+          else navigate('/store');
+        } else {
+          navigate('/store');
+        }
       } else {
         const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        // Si se registró con éxito, puede que requiera confirmación por email, pero asumimos auto-login en dev
+        // Si se registró con éxito, asignamos rol por defecto "tienda"
         if(data.user) {
+           await supabase.from('roles_usuario').insert({
+             user_id: data.user.id,
+             email: data.user.email,
+             rol: 'tienda'
+           });
            alert("Usuario creado exitosamente. Ya puedes iniciar sesión.");
            setIsLogin(true);
         }
