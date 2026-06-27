@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useNavigate, Link } from 'react-router-dom';
-import { LogOut, ArrowLeft, Activity, Trash2, Plus, MapPin, Store, Truck } from 'lucide-react';
+import { LogOut, ArrowLeft, Activity, Trash2, Plus, MapPin, Store, Truck, Edit2, X, Check } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -48,6 +48,9 @@ function AdminDashboard() {
     nombre: '', tipo_producto: 'Carne de Pollo', email: '', password: ''
   });
 
+  const [editingMercadoId, setEditingMercadoId] = useState(null);
+  const [editForm, setEditForm] = useState({ distribuidor_pollo: '', distribuidor_res: '' });
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,7 +67,7 @@ function AdminDashboard() {
     setLoading(true);
     const { data: mercs } = await supabase
       .from('puntos_venta')
-      .select(`*, inventarios ( proveedores ( nombre, tipo_producto ) )`)
+      .select(`*, inventarios ( id, producto_id, proveedor_id, proveedores ( nombre, tipo_producto ) )`)
       .order('nombre');
 
     if (mercs) setMercados(mercs);
@@ -169,6 +172,59 @@ function AdminDashboard() {
       alert("Proveedor eliminado");
       fetchData();
     } catch (err) { alert("Error: " + err.message); setLoading(false); }
+  };
+
+  const handleEditClick = (mercado) => {
+    const polloProd = productos.find(p => p.nombre.toLowerCase().includes('pollo'));
+    const resProd = productos.find(p => p.nombre.toLowerCase().includes('res'));
+
+    const invPollo = mercado.inventarios.find(i => i.producto_id === polloProd?.id);
+    const invRes = mercado.inventarios.find(i => i.producto_id === resProd?.id);
+
+    setEditForm({
+      distribuidor_pollo: invPollo?.proveedor_id || '',
+      distribuidor_res: invRes?.proveedor_id || ''
+    });
+    setEditingMercadoId(mercado.id);
+  };
+
+  const handleSaveEdit = async (mercado) => {
+    setLoading(true);
+    try {
+      const polloProd = productos.find(p => p.nombre.toLowerCase().includes('pollo'));
+      const resProd = productos.find(p => p.nombre.toLowerCase().includes('res'));
+
+      const invPollo = mercado.inventarios.find(i => i.producto_id === polloProd?.id);
+      const invRes = mercado.inventarios.find(i => i.producto_id === resProd?.id);
+
+      // Handle Pollo
+      if (editForm.distribuidor_pollo) {
+        if (invPollo) {
+          await supabase.from('inventarios').update({ proveedor_id: editForm.distribuidor_pollo }).eq('id', invPollo.id);
+        } else if (polloProd) {
+          await supabase.from('inventarios').insert({ punto_venta_id: mercado.id, producto_id: polloProd.id, proveedor_id: editForm.distribuidor_pollo, cantidad_asignada: 0, precio_actual: 0, estado: 'Agotado', nivel_calor: 1.0 });
+        }
+      } else if (invPollo) {
+        await supabase.from('inventarios').delete().eq('id', invPollo.id);
+      }
+
+      // Handle Res
+      if (editForm.distribuidor_res) {
+        if (invRes) {
+          await supabase.from('inventarios').update({ proveedor_id: editForm.distribuidor_res }).eq('id', invRes.id);
+        } else if (resProd) {
+          await supabase.from('inventarios').insert({ punto_venta_id: mercado.id, producto_id: resProd.id, proveedor_id: editForm.distribuidor_res, cantidad_asignada: 0, precio_actual: 0, estado: 'Agotado', nivel_calor: 1.0 });
+        }
+      } else if (invRes) {
+        await supabase.from('inventarios').delete().eq('id', invRes.id);
+      }
+
+      setEditingMercadoId(null);
+      fetchData();
+    } catch (err) {
+      alert("Error al actualizar: " + err.message);
+      setLoading(false);
+    }
   };
 
   if (loading) return <div className="h-screen bg-[#050505] flex flex-col gap-4 items-center justify-center text-rose-500"><Activity className="w-10 h-10 animate-pulse" /><p className="text-xs tracking-widest uppercase">Sincronizando...</p></div>;
@@ -294,17 +350,46 @@ function AdminDashboard() {
                     <h2 className="font-bold text-lg text-white">{mercado.nombre}</h2>
                     <span className="text-[9px] uppercase tracking-widest text-zinc-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full mt-1 inline-block">{mercado.tipo}</span>
                   </div>
-                  <button onClick={() => handleDeleteMercado(mercado.id, mercado.nombre)} className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  <div className="flex gap-1">
+                    <button onClick={() => handleEditClick(mercado)} className="p-2 text-zinc-500 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteMercado(mercado.id, mercado.nombre)} className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </div>
+                
                 <div className="mt-auto pt-4 border-t border-white/10">
                   <h3 className="text-[10px] uppercase text-zinc-500 font-bold mb-2">Distribuidores Asignados</h3>
-                  {mercado.inventarios && mercado.inventarios.length > 0 ? (
-                    <div className="space-y-1">
-                      {mercado.inventarios.map((inv, idx) => (
-                        <p key={idx} className="text-xs text-emerald-400">• {inv.proveedores?.nombre} <span className="text-zinc-500">({inv.proveedores?.tipo_producto})</span></p>
-                      ))}
+                  {editingMercadoId === mercado.id ? (
+                    <div className="space-y-3 bg-black/50 p-3 rounded-lg border border-white/5">
+                      <div>
+                        <label className="block text-[9px] text-zinc-500 uppercase mb-1">Pollo</label>
+                        <select value={editForm.distribuidor_pollo} onChange={e => setEditForm({...editForm, distribuidor_pollo: e.target.value})} className="w-full bg-black/80 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:border-emerald-500 outline-none">
+                          <option value="">Ninguno</option>
+                          {provsPollo.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[9px] text-zinc-500 uppercase mb-1">Res</label>
+                        <select value={editForm.distribuidor_res} onChange={e => setEditForm({...editForm, distribuidor_res: e.target.value})} className="w-full bg-black/80 border border-white/10 rounded px-2 py-1.5 text-xs text-white focus:border-emerald-500 outline-none">
+                          <option value="">Ninguno</option>
+                          {provsRes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 justify-end pt-1">
+                        <button onClick={() => setEditingMercadoId(null)} className="p-1.5 text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded"><X className="w-3 h-3" /></button>
+                        <button onClick={() => handleSaveEdit(mercado)} className="p-1.5 text-emerald-400 hover:text-white bg-emerald-500/20 hover:bg-emerald-500/40 rounded"><Check className="w-3 h-3" /></button>
+                      </div>
                     </div>
-                  ) : <p className="text-xs text-zinc-500 italic">Ningún distribuidor asignado</p>}
+                  ) : (
+                    <>
+                      {mercado.inventarios && mercado.inventarios.length > 0 ? (
+                        <div className="space-y-1">
+                          {mercado.inventarios.map((inv, idx) => (
+                            <p key={idx} className="text-xs text-emerald-400">• {inv.proveedores?.nombre} <span className="text-zinc-500">({inv.proveedores?.tipo_producto})</span></p>
+                          ))}
+                        </div>
+                      ) : <p className="text-xs text-zinc-500 italic">Ningún distribuidor asignado</p>}
+                    </>
+                  )}
                 </div>
               </div>
             ))}
